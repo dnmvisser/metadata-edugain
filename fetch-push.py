@@ -17,6 +17,8 @@ utc=pytz.UTC
 
 url = 'https://mds.edugain.org/edugain-v1.xml'
 filename=Path(url).name
+cwd=Path(__file__).parent
+
 
 r = requests.head(url)
 url_date = parsedate(r.headers['last-modified'])
@@ -47,7 +49,7 @@ if url_date > file_date:
     fetch_metadata()
 
 
-repo = Repo('.')
+repo = Repo(cwd)
 
 if repo.is_dirty(untracked_files=True):
     if filename in repo.untracked_files:
