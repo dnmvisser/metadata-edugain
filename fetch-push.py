@@ -21,17 +21,41 @@ filename=Path(url).name
 r = requests.head(url)
 url_date = parsedate(r.headers['last-modified'])
 
-file_date = utc.localize(datetime.datetime.utcfromtimestamp(os.path.getmtime(filename)))
-
-
-if url_date > file_date:
-    r = requests.get(url)
-    with open(filename, 'wb') as fd:
+def fetch_metadata(u=url, f=filename):
+    r = requests.get(u)
+    with open(f, 'wb') as fd:
         for chunk in r.iter_content(4096):
             fd.write(chunk)
 
+def add_commit_push(f=filename, c='Metadata timestampted at ' + url_date.isoformat()):
+    repo.index.add([f])
+    repo.index.commit(c)
+    repo.remotes.origin.push() 
+
+
+# Only needed at the very start
+if not Path(filename).is_file():
+    fetch_metadata()
+
+
+
+file_date = utc.localize(datetime.datetime.utcfromtimestamp(os.path.getmtime(filename)))
+
+
+
+if url_date > file_date:
+    fetch_metadata()
+
 
 repo = Repo('.')
+
+if repo.is_dirty(untracked_files=True):
+    if filename in repo.untracked_files:
+#        repo.index.add([filename])
+#        repo.index.commit('Metadata timestamped at ' + url_date.isoformat())
+        add_commit_push()
+
 if filename in [ item.a_path for item in repo.index.diff(None) ]:
-    repo.index.add([filename])
-    repo.index.commit('Metadata timestamped at ' + url_date.isoformat())
+#    repo.index.add([filename])
+#    repo.index.commit('Metadata timestamped at ' + url_date.isoformat())
+    add_commit_push()
