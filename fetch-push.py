@@ -16,32 +16,38 @@ from git import Repo
 utc=pytz.UTC
 
 url = 'https://mds.edugain.org/edugain-v1.xml'
-filename=Path(url).name
-cwd=Path(__file__).parent
 
+cwd=Path(__file__).parent
+metadata_filename=Path(url).name
+metadata_path=cwd.joinpath(metadata_filename)
+
+#print(cwd)
+#print(metadata_filename)
+#print(metadata_path)
+#exit
 
 r = requests.head(url)
 url_date = parsedate(r.headers['last-modified'])
 
-def fetch_metadata(u=url, f=filename):
+def fetch_metadata(u=url, f=metadata_path):
     r = requests.get(u)
     with open(f, 'wb') as fd:
         for chunk in r.iter_content(4096):
             fd.write(chunk)
 
-def add_commit_push(f=filename, c='Metadata timestampted at ' + url_date.isoformat()):
+def add_commit_push(f=metadata_filename, c='Metadata timestampted at ' + url_date.isoformat()):
     repo.index.add([f])
     repo.index.commit(c)
     repo.remotes.origin.push() 
 
 
 # Only needed at the very start
-if not Path(filename).is_file():
+if not Path(metadata_path).is_file():
     fetch_metadata()
 
 
 
-file_date = utc.localize(datetime.datetime.utcfromtimestamp(os.path.getmtime(filename)))
+file_date = utc.localize(datetime.datetime.utcfromtimestamp(os.path.getmtime(metadata_path)))
 
 
 
@@ -52,12 +58,8 @@ if url_date > file_date:
 repo = Repo(cwd)
 
 if repo.is_dirty(untracked_files=True):
-    if filename in repo.untracked_files:
-#        repo.index.add([filename])
-#        repo.index.commit('Metadata timestamped at ' + url_date.isoformat())
+    if metadata_filename in repo.untracked_files:
         add_commit_push()
 
-if filename in [ item.a_path for item in repo.index.diff(None) ]:
-#    repo.index.add([filename])
-#    repo.index.commit('Metadata timestamped at ' + url_date.isoformat())
+if metadata_filename in [ item.a_path for item in repo.index.diff(None) ]:
     add_commit_push()
